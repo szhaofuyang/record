@@ -1,4 +1,4 @@
-# love_diary_app.py - 含可爱表情，首页丰富
+# love_diary_app.py - 含自定义背景颜色
 import streamlit as st
 import json
 import os
@@ -183,8 +183,9 @@ def get_map_html():
 def init_settings():
     if "settings" not in st.session_state:
         st.session_state.settings = {
-            "theme": "light",
-            "bg_image": None,
+            "theme": "light",          # light, dark, custom
+            "custom_color": "#f8f8fc", # 自定义纯色背景
+            "bg_image": None,          # base64 string
         }
 init_settings()
 
@@ -194,21 +195,33 @@ def apply_theme():
     theme = settings["theme"]
     bg_image = settings.get("bg_image")
 
+    # 确定背景色
+    if bg_image:
+        # 如果设置了背景图片，直接使用图片背景，忽略颜色
+        bg_color = None
+    else:
+        if theme == "light":
+            bg_color = "#f8f8fc"
+        elif theme == "dark":
+            bg_color = "#1c1c1e"
+        else:  # custom
+            bg_color = settings.get("custom_color", "#f8f8fc")
+
+    # 卡片和文字颜色
     if theme == "dark":
-        bg_color = "#1c1c1e"
         card_bg = "#2c2c2e"
         text_color = "#f5f5f7"
         border_color = "rgba(255,255,255,0.06)"
         input_bg = "#3a3a3c"
         shadow = "0 8px 30px rgba(0,0,0,0.3)"
     else:
-        bg_color = "#f8f8fc"
         card_bg = "#ffffff"
         text_color = "#1c1c1e"
         border_color = "rgba(0,0,0,0.03)"
         input_bg = "#ffffff"
         shadow = "0 4px 20px rgba(0,0,0,0.04)"
 
+    # 背景 CSS
     bg_css = ""
     if bg_image:
         bg_css = f"""
@@ -441,24 +454,31 @@ def settings_page():
     st.header("⚙️ 设置")
     settings = st.session_state.settings
 
-    st.subheader("🎨 主题")
+    st.subheader("🎨 主题与背景")
     theme = st.radio(
         "选择主题",
-        ["浅色", "深色", "跟随系统"],
-        index=["浅色", "深色", "跟随系统"].index(
+        ["浅色", "深色", "自定义"],
+        index=["浅色", "深色", "自定义"].index(
             "浅色" if settings["theme"] == "light" else
             "深色" if settings["theme"] == "dark" else
-            "跟随系统"
+            "自定义"
         ),
         horizontal=True
     )
-    new_theme = {"浅色": "light", "深色": "dark", "跟随系统": "system"}[theme]
+    new_theme = {"浅色": "light", "深色": "dark", "自定义": "custom"}[theme]
     if new_theme != settings["theme"]:
         settings["theme"] = new_theme
         st.rerun()
 
+    # 自定义背景色
+    if settings["theme"] == "custom":
+        custom_color = st.color_picker("选择背景颜色", settings.get("custom_color", "#f8f8fc"))
+        if custom_color != settings.get("custom_color"):
+            settings["custom_color"] = custom_color
+            st.rerun()
+
     st.subheader("🖼️ 背景图片")
-    bg_file = st.file_uploader("从手机相册选择照片", type=["png","jpg","jpeg"])
+    bg_file = st.file_uploader("从手机相册选择照片（优先于纯色）", type=["png","jpg","jpeg"])
     if bg_file:
         img = bg_file.read()
         b64 = base64.b64encode(img).decode()
@@ -499,11 +519,9 @@ def home_page():
     today = date.today()
     days = (today - start_date).days
 
-    # 显示大数字和起始日期
     st.markdown(f"<div class='big-number'>❤️ {days}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='date-info'>从 2022年7月4日 至今，我们在一起了 {days} 天 ✨</div>", unsafe_allow_html=True)
 
-    # 统计卡片（带表情）
     entries = get_entries()
     total = len(entries)
     mood_counts = {}
