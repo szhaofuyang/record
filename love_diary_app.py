@@ -1,4 +1,4 @@
-# love_diary_app.py - 含设置（无字号调整），UI优化版
+# love_diary_app.py - 含可爱表情，首页丰富
 import streamlit as st
 import json
 import os
@@ -406,6 +406,13 @@ def apply_theme():
             margin: 1.5rem 0 0.8rem 0;
             color: {text_color};
         }}
+        .date-info {{
+            text-align: center;
+            color: #8e8e93;
+            font-size: 0.95rem;
+            margin-top: -0.3rem;
+            margin-bottom: 1rem;
+        }}
         @media (max-width: 768px) {{
             .css-1d391kg {{ width: 280px !important; }}
             .stRadio > div > label {{ font-size: 0.95rem !important; padding: 0.7rem 1rem !important; min-height: 48px; }}
@@ -431,10 +438,10 @@ apply_theme()
 
 # ================= 设置页面 =================
 def settings_page():
-    st.header("设置")
+    st.header("⚙️ 设置")
     settings = st.session_state.settings
 
-    st.subheader("主题")
+    st.subheader("🎨 主题")
     theme = st.radio(
         "选择主题",
         ["浅色", "深色", "跟随系统"],
@@ -450,20 +457,20 @@ def settings_page():
         settings["theme"] = new_theme
         st.rerun()
 
-    st.subheader("背景图片")
+    st.subheader("🖼️ 背景图片")
     bg_file = st.file_uploader("从手机相册选择照片", type=["png","jpg","jpeg"])
     if bg_file:
         img = bg_file.read()
         b64 = base64.b64encode(img).decode()
         settings["bg_image"] = b64
-        st.success("背景已更新")
+        st.success("✅ 背景已更新")
         st.rerun()
     if settings.get("bg_image"):
         if st.button("移除背景图片"):
             settings["bg_image"] = None
             st.rerun()
 
-    st.subheader("数据管理")
+    st.subheader("💾 数据管理")
     col1, col2 = st.columns(2)
     with col1:
         if st.button("导出数据 (JSON)", use_container_width=True):
@@ -480,18 +487,23 @@ def settings_page():
             try:
                 imported = json.load(uploaded_file)
                 save_data(imported)
-                st.success("数据导入成功，请刷新页面")
+                st.success("✅ 数据导入成功，请刷新页面")
                 st.rerun()
             except Exception as e:
-                st.error(f"导入失败: {e}")
+                st.error(f"❌ 导入失败: {e}")
 
 # ================= 页面模块 =================
 def home_page():
-    st.header("恋爱日记")
+    st.header("💕 恋爱日记")
     start_date = date(2022, 7, 4)
-    days = (date.today() - start_date).days
-    st.markdown(f"<div class='big-number'>{days}</div><div style='text-align:center;color:#8e8e93;margin-bottom:1rem;'>在一起的天数</div>", unsafe_allow_html=True)
+    today = date.today()
+    days = (today - start_date).days
 
+    # 显示大数字和起始日期
+    st.markdown(f"<div class='big-number'>❤️ {days}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='date-info'>从 2022年7月4日 至今，我们在一起了 {days} 天 ✨</div>", unsafe_allow_html=True)
+
+    # 统计卡片（带表情）
     entries = get_entries()
     total = len(entries)
     mood_counts = {}
@@ -504,30 +516,30 @@ def home_page():
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown(f"<div class='stat-card'><div class='stat-number'>{total}</div><div class='stat-label'>日记</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='stat-card'><div class='stat-number'>📝 {total}</div><div class='stat-label'>日记</div></div>", unsafe_allow_html=True)
     with col2:
-        st.markdown(f"<div class='stat-card'><div class='stat-number'>{visited}</div><div class='stat-label'>省份</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='stat-card'><div class='stat-number'>📍 {visited}</div><div class='stat-label'>省份</div></div>", unsafe_allow_html=True)
     with col3:
-        st.markdown(f"<div class='stat-card'><div class='stat-number'>{photos}</div><div class='stat-label'>照片</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='stat-card'><div class='stat-number'>🖼️ {photos}</div><div class='stat-label'>照片</div></div>", unsafe_allow_html=True)
     with col4:
-        st.markdown(f"<div class='stat-card'><div class='stat-number'>{top_mood}</div><div class='stat-label'>心情</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='stat-card'><div class='stat-number'>😊 {top_mood}</div><div class='stat-label'>心情</div></div>", unsafe_allow_html=True)
 
     if entries:
-        st.markdown("<div class='sub-header'>最近日记</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-header'>📖 最近日记</div>", unsafe_allow_html=True)
         for e in entries[-5:][::-1]:
             with st.expander(f"{e.get('date', '')} {e.get('title', '无标题')}"):
                 st.write(e.get('content', '')[:300] + ("..." if len(e.get('content',''))>300 else ""))
 
 def diary_page():
-    st.header("日记")
-    tab1, tab2 = st.tabs(["浏览", "写日记"])
+    st.header("📖 日记")
+    tab1, tab2 = st.tabs(["📋 浏览", "✏️ 写日记"])
     with tab1:
         entries = get_entries()
         if not entries:
-            st.info("还没有日记")
+            st.info("📭 还没有日记")
         else:
-            search = st.text_input("搜索标题或内容")
-            tag_filter = st.text_input("标签筛选（逗号分隔）")
+            search = st.text_input("🔍 搜索标题或内容")
+            tag_filter = st.text_input("🏷️ 标签筛选（逗号分隔）")
             filtered = []
             for e in entries:
                 match = True
@@ -545,9 +557,9 @@ def diary_page():
             for e in filtered[::-1]:
                 with st.expander(f"{e.get('date', '')} {e.get('title', '无标题')}"):
                     st.write(e.get('content', ''))
-                    if e.get('tags'): st.caption(f"标签: {e['tags']}")
-                    if e.get('mood'): st.caption(f"心情: {e['mood']}")
-                    if e.get('location'): st.caption(f"地点: {e['location']}")
+                    if e.get('tags'): st.caption(f"🏷️ 标签: {e['tags']}")
+                    if e.get('mood'): st.caption(f"😊 心情: {e['mood']}")
+                    if e.get('location'): st.caption(f"📍 地点: {e['location']}")
                     if e.get('images'):
                         cols = st.columns(min(len(e['images']), 4))
                         for idx, img in enumerate(e['images']):
@@ -556,21 +568,21 @@ def diary_page():
                                     st.image(os.path.join("data/images", img), use_column_width=True)
                                 except:
                                     pass
-                    if st.button("删除", key=f"del_{e['id']}"):
+                    if st.button("🗑️ 删除", key=f"del_{e['id']}"):
                         delete_entry(e['id'])
                         st.rerun()
     with tab2:
         with st.form("new_entry"):
-            date_input = st.date_input("日期", value=date.today())
-            title = st.text_input("标题")
-            content = st.text_area("内容", height=150)
-            mood = st.selectbox("心情", ["开心", "热恋", "平静", "忧虑", "难过"])
-            tags = st.text_input("标签（逗号分隔）")
-            location = st.text_input("地点")
-            intimacy = st.slider("亲密度", 1, 10, 7)
-            privacy = st.checkbox("私密")
-            images_input = st.file_uploader("上传图片", type=["png","jpg","jpeg","gif"], accept_multiple_files=True)
-            if st.form_submit_button("保存"):
+            date_input = st.date_input("📅 日期", value=date.today())
+            title = st.text_input("📌 标题")
+            content = st.text_area("📝 内容", height=150)
+            mood = st.selectbox("😊 心情", ["开心", "热恋", "平静", "忧虑", "难过"])
+            tags = st.text_input("🏷️ 标签（逗号分隔）")
+            location = st.text_input("📍 地点")
+            intimacy = st.slider("💕 亲密度", 1, 10, 7)
+            privacy = st.checkbox("🔒 私密")
+            images_input = st.file_uploader("🖼️ 上传图片", type=["png","jpg","jpeg","gif"], accept_multiple_files=True)
+            if st.form_submit_button("💾 保存"):
                 add_entry({
                     "date": date_input.isoformat(),
                     "title": title,
@@ -582,26 +594,26 @@ def diary_page():
                     "privacy": privacy,
                     "created_at": datetime.utcnow().isoformat()
                 }, images_input)
-                st.success("保存成功")
+                st.success("✅ 保存成功")
                 st.rerun()
 
 def gallery_page():
-    st.header("照片墙")
-    with st.expander("上传新照片"):
+    st.header("🖼️ 照片墙")
+    with st.expander("📤 上传新照片"):
         with st.form("upload_photo"):
             photo_file = st.file_uploader("选择照片", type=["png","jpg","jpeg","gif"])
-            caption = st.text_input("备注（可选）")
-            if st.form_submit_button("上传"):
+            caption = st.text_input("📝 备注（可选）")
+            if st.form_submit_button("⬆️ 上传"):
                 if photo_file:
                     add_photo(photo_file, caption)
-                    st.success("上传成功")
+                    st.success("✅ 上传成功")
                     st.rerun()
                 else:
-                    st.error("请选择照片")
+                    st.error("❌ 请选择照片")
 
     photos = get_photos()
     if not photos:
-        st.info("还没有照片，上传一张吧")
+        st.info("📭 还没有照片，上传一张吧")
     else:
         cols = st.columns(4)
         for idx, p in enumerate(photos[::-1]):
@@ -610,41 +622,41 @@ def gallery_page():
                     st.image(p["filepath"], use_column_width=True)
                     if p.get('caption'):
                         st.caption(p['caption'])
-                    if st.button("删除", key=f"del_photo_{p['id']}"):
+                    if st.button("🗑️ 删除", key=f"del_photo_{p['id']}"):
                         delete_photo(p['id'])
                         st.rerun()
                 except:
                     pass
 
 def map_page():
-    st.header("点亮中国")
-    st.subheader("足迹地图")
+    st.header("🗺️ 点亮中国")
+    st.subheader("📍 足迹地图")
     map_html = get_map_html()
     st.components.v1.html(map_html, height=650, width=None)
 
-    st.subheader("添加新地点")
+    st.subheader("➕ 添加新地点")
     with st.form("add_place"):
         col1, col2 = st.columns(2)
         with col1:
             province = st.selectbox("选择省份", PROVINCES)
         with col2:
-            note = st.text_input("备注（城市/景点）")
-        images = st.file_uploader("上传照片", type=["png","jpg","jpeg","gif"], accept_multiple_files=True)
-        if st.form_submit_button("保存"):
+            note = st.text_input("📝 备注（城市/景点）")
+        images = st.file_uploader("🖼️ 上传照片", type=["png","jpg","jpeg","gif"], accept_multiple_files=True)
+        if st.form_submit_button("💾 保存"):
             if add_visited_place(province, note, images):
-                st.success(f"已添加 {province}")
+                st.success(f"✅ 已添加 {province}")
                 st.rerun()
             else:
-                st.error(f"{province} 已存在")
+                st.error(f"❌ {province} 已存在")
 
     places = get_visited_places()
     if not places:
-        st.info("还没有去过的地方")
+        st.info("🗺️ 还没有去过的地方")
     else:
         for p in places:
-            with st.expander(f"{p['province']} - {p.get('date', '')}"):
+            with st.expander(f"📍 {p['province']} - {p.get('date', '')}"):
                 if p.get('note'):
-                    st.write(f"备注: {p['note']}")
+                    st.write(f"📝 备注: {p['note']}")
                 if p.get('images'):
                     cols = st.columns(min(len(p['images']), 4))
                     for idx, img in enumerate(p['images']):
@@ -653,27 +665,27 @@ def map_page():
                                 st.image(os.path.join("data/images/visited", img), use_column_width=True)
                             except:
                                 pass
-                if st.button("删除", key=f"del_place_{p['id']}"):
+                if st.button("🗑️ 删除", key=f"del_place_{p['id']}"):
                     delete_visited_place(p['id'])
                     st.rerun()
 
 def stats_page():
-    st.header("统计")
+    st.header("📊 统计")
     entries = get_entries()
     if not entries:
-        st.info("暂无数据")
+        st.info("📭 暂无数据")
         return
     df = pd.DataFrame(entries)
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("心情分布")
+        st.subheader("😊 心情分布")
         st.bar_chart(df['mood'].value_counts())
     with col2:
-        st.subheader("每月日记数")
+        st.subheader("📈 每月日记数")
         df['month'] = pd.to_datetime(df['date']).dt.to_period('M').astype(str)
         st.line_chart(df.groupby('month').size())
     if 'intimacy' in df.columns:
-        st.subheader("亲密度趋势")
+        st.subheader("💕 亲密度趋势")
         df['date'] = pd.to_datetime(df['date'])
         st.line_chart(df.sort_values('date').set_index('date')['intimacy'])
     all_tags = []
@@ -682,29 +694,29 @@ def stats_page():
             all_tags.extend([t.strip() for t in e['tags'].split(',') if t.strip()])
     if all_tags:
         tag_counts = pd.Series(all_tags).value_counts()
-        st.subheader("常用标签")
+        st.subheader("🏷️ 常用标签")
         st.bar_chart(tag_counts)
 
 # ================= 导航栏 =================
-st.sidebar.title("恋爱日记")
+st.sidebar.title("💕 恋爱日记")
 menu = st.sidebar.radio("", [
-    "首页",
-    "日记",
-    "照片墙",
-    "地图",
-    "统计",
-    "设置"
+    "🏠 首页",
+    "📖 日记",
+    "🖼️ 照片墙",
+    "🗺️ 地图",
+    "📊 统计",
+    "⚙️ 设置"
 ])
 
-if menu == "首页":
+if menu == "🏠 首页":
     home_page()
-elif menu == "日记":
+elif menu == "📖 日记":
     diary_page()
-elif menu == "照片墙":
+elif menu == "🖼️ 照片墙":
     gallery_page()
-elif menu == "地图":
+elif menu == "🗺️ 地图":
     map_page()
-elif menu == "统计":
+elif menu == "📊 统计":
     stats_page()
-elif menu == "设置":
+elif menu == "⚙️ 设置":
     settings_page()
