@@ -1,4 +1,4 @@
-# love_diary_app.py - 新增地图点亮功能
+# love_diary_app.py - 地图点亮 + 圆角矩形按钮
 import streamlit as st
 import json
 import os
@@ -19,7 +19,7 @@ def init_data():
             "memorials": [],
             "todos": [],
             "quotes": [],
-            "visited_places": []  # 新增：去过的地方
+            "visited_places": []
         }
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(default_data, f, ensure_ascii=False, indent=2)
@@ -102,7 +102,6 @@ def delete_todo(tid):
     save_data(data)
 
 # ================= 地图相关 =================
-# 中国省份列表（34个省级行政区）
 PROVINCES = [
     "北京市", "天津市", "上海市", "重庆市",
     "河北省", "山西省", "辽宁省", "吉林省", "黑龙江省",
@@ -119,10 +118,9 @@ def get_visited_places():
 
 def add_visited_place(province, note, image_files):
     data = load_data()
-    # 检查是否已存在
     for p in data["visited_places"]:
         if p["province"] == province:
-            return False  # 已存在
+            return False
     place = {
         "id": len(data["visited_places"]) + 1,
         "province": province,
@@ -158,23 +156,19 @@ def delete_visited_place(pid):
     save_data(data)
 
 def get_map_html():
-    """生成中国地图 HTML"""
     visited = get_visited_places()
     visited_provinces = [p["province"] for p in visited]
-    
-    # 构建数据：去过为1，未去为0（但只显示去过的高亮）
     data_pair = [(province, 1 if province in visited_provinces else 0) for province in PROVINCES]
-    
     c = (
         Map(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="100%", height="600px"))
         .add("去过的地方", data_pair, "china", is_map_symbol_show=False)
         .set_global_opts(
             title_opts=opts.TitleOpts(title="", subtitle=""),
             visualmap_opts=opts.VisualMapOpts(
-                is_show=False,  # 不显示颜色条
+                is_show=False,
                 min_=0,
                 max_=1,
-                range_color=["#e0e0e0", "#FF6B8A"],  # 未去为浅灰，去过为粉色
+                range_color=["#e0e0e0", "#FF6B8A"],
             ),
             tooltip_opts=opts.TooltipOpts(
                 trigger="item",
@@ -185,12 +179,12 @@ def get_map_html():
             label_opts=opts.LabelOpts(is_show=True, color="#333", font_size=10)
         )
     )
-    return c.render_embed()  # 返回 HTML 字符串
+    return c.render_embed()
 
 # ================= 页面配置与样式 =================
 st.set_page_config(page_title="恋爱日记", layout="wide", initial_sidebar_state="expanded")
 
-# iOS 风格 CSS（与之前保持一致）
+# iOS 风格 CSS（按钮改为圆角矩形）
 st.markdown("""
 <style>
     /* ===== 全局 ===== */
@@ -254,15 +248,15 @@ st.markdown("""
         display: none !important;
     }
 
-    /* ===== 椭圆按钮 ===== */
+    /* ===== 🔵 圆角矩形按钮 ===== */
     .stButton > button,
     .stDownloadButton > button,
     .stFileUploader button {
         background: rgba(255, 107, 138, 0.12) !important;
         color: #FF6B8A !important;
         border: 1px solid rgba(255, 107, 138, 0.25) !important;
-        border-radius: 9999px !important;
-        padding: 0.6rem 2rem !important;
+        border-radius: 12px !important;  /* 改为圆角矩形 */
+        padding: 0.6rem 1.8rem !important;
         font-weight: 500 !important;
         font-size: 1rem !important;
         transition: all 0.25s ease !important;
@@ -276,6 +270,10 @@ st.markdown("""
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
         line-height: 1.2;
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
     .stButton > button:hover,
     .stDownloadButton > button:hover,
@@ -295,6 +293,7 @@ st.markdown("""
         color: white !important;
         border: none !important;
         box-shadow: 0 4px 14px rgba(255, 107, 138, 0.35) !important;
+        border-radius: 12px !important;
     }
     .stButton > button[kind="primary"]:hover {
         box-shadow: 0 6px 24px rgba(255, 107, 138, 0.45) !important;
@@ -309,7 +308,7 @@ st.markdown("""
     .stTextArea > div > div > textarea,
     .stSelectbox > div > div,
     .stDateInput > div > div {
-        border-radius: 16px !important;
+        border-radius: 12px !important;
         border: 1.5px solid rgba(0,0,0,0.06) !important;
         background: #ffffff !important;
         padding: 0.7rem 1rem !important;
@@ -346,7 +345,7 @@ st.markdown("""
     /* ===== 卡片 ===== */
     .card, .stExpander {
         background: #ffffff;
-        border-radius: 20px !important;
+        border-radius: 16px !important;
         border: 1px solid rgba(0,0,0,0.03) !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.03) !important;
         padding: 1.2rem !important;
@@ -380,6 +379,7 @@ st.markdown("""
             padding: 0.6rem 1rem !important;
             min-height: 48px;
             font-size: 1rem !important;
+            border-radius: 12px !important;
         }
         .main .block-container {
             padding-left: 1rem !important;
@@ -398,7 +398,7 @@ st.markdown("""
 # ================= 页面函数 =================
 def home_page():
     st.header("💗 恋爱日记")
-    start_date = date(2022, 7, 4)  # ⚠️ 修改为你的纪念日
+    start_date = date(2023, 1, 1)  # 修改为你的纪念日
     days = (date.today() - start_date).days
     st.markdown(f"<div class='big-number'>{days}</div><div style='text-align:center;color:#8e8e93;'>在一起的天数</div>", unsafe_allow_html=True)
     
@@ -568,16 +568,12 @@ def stats_page():
         df['date'] = pd.to_datetime(df['date'])
         st.line_chart(df.sort_values('date').set_index('date')['intimacy'])
 
-# ================= 地图页面 =================
 def map_page():
     st.header("🗺️ 点亮中国")
-    
-    # 显示地图
     st.subheader("📌 足迹地图")
     map_html = get_map_html()
     st.components.v1.html(map_html, height=650, width=None)
     
-    # 添加地点表单
     st.subheader("➕ 添加新地点")
     with st.form("add_place"):
         col1, col2 = st.columns(2)
@@ -593,7 +589,6 @@ def map_page():
             else:
                 st.error(f"❌ {province} 已存在，请勿重复添加")
     
-    # 显示已去地点列表
     st.subheader("📍 已点亮的地点")
     places = get_visited_places()
     if not places:
