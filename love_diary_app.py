@@ -1,4 +1,4 @@
-# love_diary_app.py - 无表情导航，iOS精致风格，照片墙独立上传
+# love_diary_app.py - 含设置功能（背景主题、字号、照片背景）
 import streamlit as st
 import json
 import os
@@ -7,7 +7,8 @@ import pandas as pd
 from pyecharts.charts import Map
 from pyecharts import options as opts
 from pyecharts.globals import ThemeType
-import random
+import base64
+import tempfile
 
 # ================= 数据存储 =================
 DATA_FILE = "data.json"
@@ -17,7 +18,7 @@ def init_data():
         default = {
             "entries": [],
             "visited_places": [],
-            "photos": []  # 独立照片墙
+            "photos": []
         }
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(default, f, ensure_ascii=False, indent=2)
@@ -179,245 +180,197 @@ def get_map_html():
     )
     return c.render_embed()
 
-# ================= 页面配置与CSS =================
-st.set_page_config(page_title="恋爱日记", layout="wide", initial_sidebar_state="expanded")
-
-st.markdown("""
-<style>
-    /* 全局 */
-    .main {
-        background-color: #f8f8fc;
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-        color: #1c1c1e;
-    }
-    /* 侧边栏 - 毛玻璃 */
-    .css-1d391kg, .stSidebar {
-        background: rgba(255, 255, 255, 0.8) !important;
-        backdrop-filter: saturate(180%) blur(24px);
-        -webkit-backdrop-filter: saturate(180%) blur(24px);
-        border-right: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 0 30px rgba(0,0,0,0.04);
-    }
-    .css-1d391kg .sidebar-content {
-        padding: 2rem 0.8rem;
-    }
-    .css-1d391kg .stMarkdown h1, .css-1d391kg .stMarkdown h2, .css-1d391kg .stMarkdown h3 {
-        font-weight: 600;
-        letter-spacing: -0.02em;
-        color: #1c1c1e;
-        padding-left: 0.5rem;
-        font-size: 1.5rem;
-    }
-    /* 导航列表 - 无表情，纯文字 */
-    .stRadio > div {
-        display: flex;
-        flex-direction: column;
-        gap: 0.1rem !important;
-        padding: 0 0.5rem;
-    }
-    .stRadio > div > label {
-        display: flex !important;
-        align-items: center !important;
-        padding: 0.7rem 1.2rem !important;
-        border-radius: 14px !important;
-        background: transparent !important;
-        transition: all 0.2s ease !important;
-        font-weight: 450 !important;
-        font-size: 1rem !important;
-        color: #1c1c1e !important;
-        cursor: pointer !important;
-        margin: 0 !important;
-        line-height: 1.2;
-        min-height: 44px;
-        border: none !important;
-    }
-    .stRadio > div > label:hover {
-        background: rgba(255, 107, 138, 0.08) !important;
-    }
-    .stRadio > div > label[data-checked="true"] {
-        background: rgba(255, 107, 138, 0.12) !important;
-        color: #FF6B8A !important;
-        font-weight: 600 !important;
-        border-radius: 14px !important;
-    }
-    .stRadio > div > label > div:first-child {
-        display: none !important;
-    }
-
-    /* 按钮 - 圆角矩形 */
-    .stButton > button, .stDownloadButton > button, .stFileUploader button {
-        background: rgba(255, 107, 138, 0.12) !important;
-        color: #FF6B8A !important;
-        border: 1px solid rgba(255, 107, 138, 0.25) !important;
-        border-radius: 12px !important;
-        padding: 0.6rem 1.8rem !important;
-        font-weight: 500 !important;
-        font-size: 1rem !important;
-        transition: all 0.25s ease !important;
-        box-shadow: none !important;
-        min-height: 44px;
-        width: auto !important;
-        cursor: pointer;
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        letter-spacing: 0.3px;
-        touch-action: manipulation;
-        -webkit-tap-highlight-color: transparent;
-        line-height: 1.2;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .stButton > button:hover, .stDownloadButton > button:hover, .stFileUploader button:hover {
-        background: rgba(255, 107, 138, 0.22) !important;
-        transform: scale(1.02);
-        box-shadow: 0 4px 16px rgba(255, 107, 138, 0.15) !important;
-    }
-    .stButton > button:active, .stDownloadButton > button:active, .stFileUploader button:active {
-        transform: scale(0.94);
-        background: rgba(255, 107, 138, 0.30) !important;
-    }
-    .stButton > button[kind="primary"] {
-        background: #FF6B8A !important;
-        color: white !important;
-        border: none !important;
-        box-shadow: 0 4px 14px rgba(255, 107, 138, 0.35) !important;
-        border-radius: 12px !important;
-    }
-    .stButton > button[kind="primary"]:hover {
-        box-shadow: 0 6px 24px rgba(255, 107, 138, 0.45) !important;
-        transform: scale(1.02);
-    }
-    .stButton > button[kind="primary"]:active {
-        transform: scale(0.94);
-    }
-
-    /* 输入框 */
-    .stTextInput > div > div > input, .stTextArea > div > div > textarea,
-    .stSelectbox > div > div, .stDateInput > div > div {
-        border-radius: 12px !important;
-        border: 1.5px solid rgba(0,0,0,0.06) !important;
-        background: #ffffff !important;
-        padding: 0.7rem 1rem !important;
-        font-size: 1rem !important;
-        transition: all 0.2s ease !important;
-        min-height: 44px;
-        box-shadow: none !important;
-    }
-    .stTextInput > div > div > input:focus, .stTextArea > div > div > textarea:focus {
-        border-color: #FF6B8A !important;
-        box-shadow: 0 0 0 4px rgba(255, 107, 138, 0.15) !important;
-        outline: none !important;
-    }
-
-    /* 滑块 */
-    .stSlider > div > div > div {
-        background: rgba(255, 107, 138, 0.2) !important;
-        height: 4px !important;
-        border-radius: 4px !important;
-    }
-    .stSlider > div > div > div > div {
-        background: #FF6B8A !important;
-        border-radius: 4px !important;
-    }
-    .stSlider > div > div > div > div > div {
-        background: #FF6B8A !important;
-        border-radius: 50% !important;
-        width: 20px !important;
-        height: 20px !important;
-        box-shadow: 0 2px 8px rgba(255, 107, 138, 0.3) !important;
-    }
-
-    /* 卡片 */
-    .card, .stExpander {
-        background: #ffffff;
-        border-radius: 16px !important;
-        border: 1px solid rgba(0,0,0,0.03) !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03) !important;
-        padding: 1.2rem !important;
-        margin-bottom: 1rem !important;
-        transition: all 0.2s;
-    }
-
-    /* 大数字 */
-    .big-number {
-        font-size: 3.6rem;
-        font-weight: 700;
-        color: #FF6B8A;
-        text-align: center;
-        letter-spacing: -0.02em;
-    }
-
-    /* 统计卡片 */
-    .stat-card {
-        background: #ffffff;
-        border-radius: 16px;
-        padding: 1.2rem;
-        text-align: center;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-        border: 1px solid rgba(0,0,0,0.02);
-    }
-    .stat-number {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #FF6B8A;
-    }
-    .stat-label {
-        font-size: 0.9rem;
-        color: #8e8e93;
-        margin-top: 0.2rem;
-    }
-
-    /* 照片网格 */
-    .photo-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 10px;
-        margin-top: 1rem;
-    }
-    .photo-item {
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        background: #fff;
-        transition: transform 0.2s;
-    }
-    .photo-item:hover {
-        transform: scale(1.02);
-    }
-    .photo-item img {
-        width: 100%;
-        height: auto;
-        display: block;
-    }
-    .photo-caption {
-        padding: 0.5rem;
-        font-size: 0.8rem;
-        color: #555;
-        text-align: center;
-    }
-
-    @media (max-width: 768px) {
-        .css-1d391kg { width: 280px !important; }
-        .stRadio > div > label { font-size: 0.95rem !important; padding: 0.7rem 1rem !important; min-height: 48px; }
-        .stButton > button, .stDownloadButton > button, .stFileUploader button {
-            width: 100% !important;
-            padding: 0.6rem 1rem !important;
-            min-height: 48px;
-            font-size: 1rem !important;
-            border-radius: 12px !important;
+# ================= 设置模块 =================
+def init_settings():
+    if "settings" not in st.session_state:
+        st.session_state.settings = {
+            "theme": "light",       # light, dark, system
+            "bg_image": None,       # base64 string
+            "font_scale": 1.0,
         }
-        .main .block-container { padding-left: 1rem !important; padding-right: 1rem !important; }
-        .card { padding: 1rem !important; }
-        .big-number { font-size: 2.8rem !important; }
-        .stat-number { font-size: 1.8rem !important; }
-        .photo-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
-    }
-</style>
-""", unsafe_allow_html=True)
+init_settings()
 
-# ================= 页面模块 =================
+def apply_css():
+    settings = st.session_state.settings
+    theme = settings["theme"]
+    font_scale = settings["font_scale"]
+    bg_image = settings.get("bg_image")
 
+    # 定义颜色
+    if theme == "dark":
+        bg_color = "#1c1c1e"
+        card_bg = "#2c2c2e"
+        text_color = "#f5f5f7"
+        border_color = "rgba(255,255,255,0.06)"
+    else:
+        bg_color = "#f8f8fc"
+        card_bg = "#ffffff"
+        text_color = "#1c1c1e"
+        border_color = "rgba(0,0,0,0.03)"
+
+    # 背景图片 CSS
+    bg_css = ""
+    if bg_image:
+        bg_css = f"""
+            .stApp {{
+                background-image: url('data:image/png;base64,{bg_image}');
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+            }}
+            .stApp::before {{
+                content: '';
+                position: fixed;
+                top:0;left:0;right:0;bottom:0;
+                background: rgba(0,0,0,0.4);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                z-index: -1;
+            }}
+            .main .block-container {{
+                background: rgba(255,255,255,0.85);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border-radius: 16px;
+                padding: 1.5rem;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            }}
+        """
+    else:
+        bg_css = f"""
+            .stApp {{ background-color: {bg_color}; }}
+            .main .block-container {{
+                background: {card_bg};
+                border-radius: 16px;
+                padding: 1.5rem;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            }}
+        """
+
+    css = f"""
+        .main {{
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+            color: {text_color};
+        }}
+        .css-1d391kg, .stSidebar {{
+            background: rgba(255,255,255,0.8) !important;
+            backdrop-filter: saturate(180%) blur(24px);
+            -webkit-backdrop-filter: saturate(180%) blur(24px);
+            border-right: 1px solid rgba(255,255,255,0.3);
+        }}
+        .stRadio > div > label {{
+            color: {text_color} !important;
+        }}
+        .stRadio > div > label[data-checked="true"] {{
+            background: rgba(255,107,138,0.12) !important;
+            color: #FF6B8A !important;
+        }}
+        .card, .stExpander {{
+            background: {card_bg};
+            border: 1px solid {border_color};
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }}
+        .stat-card {{
+            background: {card_bg};
+            border: 1px solid {border_color};
+            border-radius: 16px;
+            padding: 1.2rem;
+            text-align: center;
+        }}
+        .stat-number {{
+            color: #FF6B8A;
+        }}
+        .big-number {{
+            color: #FF6B8A;
+        }}
+        .stTextInput > div > div > input, .stTextArea > div > div > textarea,
+        .stSelectbox > div > div, .stDateInput > div > div {{
+            background: {card_bg} !important;
+            color: {text_color} !important;
+            border: 1.5px solid {border_color} !important;
+        }}
+        /* 字号缩放 */
+        html, body, .stApp {{
+            font-size: {16 * font_scale}px;
+        }}
+        h1 {{ font-size: {28 * font_scale}px; }}
+        h2 {{ font-size: {22 * font_scale}px; }}
+        h3 {{ font-size: {18 * font_scale}px; }}
+        .big-number {{ font-size: {48 * font_scale}px; }}
+        .stat-number {{ font-size: {24 * font_scale}px; }}
+        .stButton > button, .stDownloadButton > button, .stFileUploader button {{
+            font-size: {16 * font_scale}px;
+            padding: 0.6rem 1.8rem;
+        }}
+        {bg_css}
+    """
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+# ================= 页面配置 =================
+st.set_page_config(page_title="恋爱日记", layout="wide", initial_sidebar_state="expanded")
+apply_css()
+
+# ================= 设置页面 =================
+def settings_page():
+    st.header("设置")
+    settings = st.session_state.settings
+
+    st.subheader("主题")
+    theme = st.radio(
+        "选择主题",
+        ["浅色", "深色", "跟随系统"],
+        index=["浅色", "深色", "跟随系统"].index(
+            "浅色" if settings["theme"] == "light" else
+            "深色" if settings["theme"] == "dark" else
+            "跟随系统"
+        ),
+        horizontal=True
+    )
+    new_theme = {"浅色": "light", "深色": "dark", "跟随系统": "system"}[theme]
+    if new_theme != settings["theme"]:
+        settings["theme"] = new_theme
+        st.rerun()
+
+    st.subheader("背景图片")
+    bg_file = st.file_uploader("从手机相册选择照片", type=["png","jpg","jpeg"])
+    if bg_file:
+        img = bg_file.read()
+        b64 = base64.b64encode(img).decode()
+        settings["bg_image"] = b64
+        st.success("背景已更新")
+        st.rerun()
+    if settings.get("bg_image"):
+        if st.button("移除背景图片"):
+            settings["bg_image"] = None
+            st.rerun()
+
+    st.subheader("字号")
+    font_scale = st.slider("文字大小", 0.8, 1.4, settings["font_scale"], 0.05)
+    if font_scale != settings["font_scale"]:
+        settings["font_scale"] = font_scale
+        st.rerun()
+
+    st.subheader("数据管理")
+    if st.button("导出数据 (JSON)"):
+        data = load_data()
+        st.download_button(
+            "下载 data.json",
+            json.dumps(data, ensure_ascii=False, indent=2),
+            file_name="love_diary_backup.json",
+            mime="application/json"
+        )
+    uploaded_file = st.file_uploader("导入数据 (JSON)", type=["json"])
+    if uploaded_file:
+        try:
+            imported = json.load(uploaded_file)
+            save_data(imported)
+            st.success("数据导入成功，请刷新页面")
+            st.rerun()
+        except Exception as e:
+            st.error(f"导入失败: {e}")
+
+# ================= 其他页面 =================
 def home_page():
     st.header("恋爱日记")
     start_date = date(2022, 7, 4)
@@ -426,7 +379,6 @@ def home_page():
 
     entries = get_entries()
     total = len(entries)
-    # 心情统计
     mood_counts = {}
     for e in entries:
         mood = e.get('mood', '未标注')
@@ -459,7 +411,6 @@ def diary_page():
         if not entries:
             st.info("还没有日记")
         else:
-            # 搜索和筛选
             search = st.text_input("搜索标题或内容")
             tag_filter = st.text_input("标签筛选（逗号分隔）")
             filtered = []
@@ -521,7 +472,6 @@ def diary_page():
 
 def gallery_page():
     st.header("照片墙")
-    # 上传照片
     with st.expander("上传新照片"):
         with st.form("upload_photo"):
             photo_file = st.file_uploader("选择照片", type=["png","jpg","jpeg","gif"])
@@ -538,9 +488,8 @@ def gallery_page():
     if not photos:
         st.info("还没有照片，上传一张吧")
     else:
-        # 显示照片网格
         cols = st.columns(4)
-        for idx, p in enumerate(photos[::-1]):  # 最新的在前面
+        for idx, p in enumerate(photos[::-1]):
             with cols[idx % 4]:
                 try:
                     st.image(p["filepath"], use_column_width=True)
@@ -612,7 +561,6 @@ def stats_page():
         st.subheader("亲密度趋势")
         df['date'] = pd.to_datetime(df['date'])
         st.line_chart(df.sort_values('date').set_index('date')['intimacy'])
-    # 标签统计
     all_tags = []
     for e in entries:
         if e.get('tags'):
@@ -629,7 +577,8 @@ menu = st.sidebar.radio("", [
     "日记",
     "照片墙",
     "地图",
-    "统计"
+    "统计",
+    "设置"
 ])
 
 if menu == "首页":
@@ -642,3 +591,5 @@ elif menu == "地图":
     map_page()
 elif menu == "统计":
     stats_page()
+elif menu == "设置":
+    settings_page()
