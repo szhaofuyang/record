@@ -1,4 +1,4 @@
-# love_diary_app.py - 含设置功能（背景主题、字号、照片背景）
+# love_diary_app.py - 含设置（无字号调整），UI优化版
 import streamlit as st
 import json
 import os
@@ -8,7 +8,6 @@ from pyecharts.charts import Map
 from pyecharts import options as opts
 from pyecharts.globals import ThemeType
 import base64
-import tempfile
 
 # ================= 数据存储 =================
 DATA_FILE = "data.json"
@@ -184,31 +183,32 @@ def get_map_html():
 def init_settings():
     if "settings" not in st.session_state:
         st.session_state.settings = {
-            "theme": "light",       # light, dark, system
-            "bg_image": None,       # base64 string
-            "font_scale": 1.0,
+            "theme": "light",
+            "bg_image": None,
         }
 init_settings()
 
-def apply_css():
+def apply_theme():
+    """根据 session_state 中的设置生成动态 CSS"""
     settings = st.session_state.settings
     theme = settings["theme"]
-    font_scale = settings["font_scale"]
     bg_image = settings.get("bg_image")
 
-    # 定义颜色
     if theme == "dark":
         bg_color = "#1c1c1e"
         card_bg = "#2c2c2e"
         text_color = "#f5f5f7"
         border_color = "rgba(255,255,255,0.06)"
+        input_bg = "#3a3a3c"
+        shadow = "0 8px 30px rgba(0,0,0,0.3)"
     else:
         bg_color = "#f8f8fc"
         card_bg = "#ffffff"
         text_color = "#1c1c1e"
         border_color = "rgba(0,0,0,0.03)"
+        input_bg = "#ffffff"
+        shadow = "0 4px 20px rgba(0,0,0,0.04)"
 
-    # 背景图片 CSS
     bg_css = ""
     if bg_image:
         bg_css = f"""
@@ -228,12 +228,12 @@ def apply_css():
                 z-index: -1;
             }}
             .main .block-container {{
-                background: rgba(255,255,255,0.85);
+                background: rgba(255,255,255,0.88);
                 backdrop-filter: blur(12px);
                 -webkit-backdrop-filter: blur(12px);
-                border-radius: 16px;
-                padding: 1.5rem;
-                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                border-radius: 20px;
+                padding: 2rem 1.8rem;
+                box-shadow: 0 8px 40px rgba(0,0,0,0.12);
             }}
         """
     else:
@@ -241,9 +241,9 @@ def apply_css():
             .stApp {{ background-color: {bg_color}; }}
             .main .block-container {{
                 background: {card_bg};
-                border-radius: 16px;
-                padding: 1.5rem;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+                border-radius: 20px;
+                padding: 2rem 1.8rem;
+                box-shadow: {shadow};
             }}
         """
 
@@ -253,55 +253,173 @@ def apply_css():
             color: {text_color};
         }}
         .css-1d391kg, .stSidebar {{
-            background: rgba(255,255,255,0.8) !important;
+            background: rgba(255,255,255,0.85) !important;
             backdrop-filter: saturate(180%) blur(24px);
             -webkit-backdrop-filter: saturate(180%) blur(24px);
             border-right: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 0 30px rgba(0,0,0,0.04);
+        }}
+        .css-1d391kg .sidebar-content {{
+            padding: 2rem 0.8rem;
+        }}
+        .stRadio > div {{
+            gap: 0.15rem !important;
         }}
         .stRadio > div > label {{
+            padding: 0.7rem 1.2rem !important;
+            border-radius: 14px !important;
+            font-weight: 450 !important;
+            font-size: 1rem !important;
             color: {text_color} !important;
+            min-height: 44px;
+            transition: background 0.2s;
+        }}
+        .stRadio > div > label:hover {{
+            background: rgba(255,107,138,0.08) !important;
         }}
         .stRadio > div > label[data-checked="true"] {{
             background: rgba(255,107,138,0.12) !important;
             color: #FF6B8A !important;
+            font-weight: 600 !important;
+        }}
+        .stRadio > div > label > div:first-child {{
+            display: none !important;
+        }}
+        .stButton > button, .stDownloadButton > button, .stFileUploader button {{
+            background: rgba(255,107,138,0.12) !important;
+            color: #FF6B8A !important;
+            border: 1px solid rgba(255,107,138,0.25) !important;
+            border-radius: 14px !important;
+            padding: 0.6rem 1.8rem !important;
+            font-weight: 500 !important;
+            font-size: 1rem !important;
+            transition: all 0.25s ease !important;
+            box-shadow: none !important;
+            min-height: 44px;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            letter-spacing: 0.3px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }}
+        .stButton > button:hover, .stDownloadButton > button:hover, .stFileUploader button:hover {{
+            background: rgba(255,107,138,0.22) !important;
+            transform: scale(1.02);
+            box-shadow: 0 4px 16px rgba(255,107,138,0.15) !important;
+        }}
+        .stButton > button:active, .stDownloadButton > button:active, .stFileUploader button:active {{
+            transform: scale(0.94);
+            background: rgba(255,107,138,0.30) !important;
+        }}
+        .stButton > button[kind="primary"] {{
+            background: #FF6B8A !important;
+            color: white !important;
+            border: none !important;
+            box-shadow: 0 4px 14px rgba(255,107,138,0.35) !important;
+            border-radius: 14px !important;
+        }}
+        .stButton > button[kind="primary"]:hover {{
+            box-shadow: 0 6px 24px rgba(255,107,138,0.45) !important;
+            transform: scale(1.02);
+        }}
+        .stButton > button[kind="primary"]:active {{
+            transform: scale(0.94);
+        }}
+        .stTextInput > div > div > input, .stTextArea > div > div > textarea,
+        .stSelectbox > div > div, .stDateInput > div > div {{
+            border-radius: 14px !important;
+            border: 1.5px solid {border_color} !important;
+            background: {input_bg} !important;
+            color: {text_color} !important;
+            padding: 0.7rem 1rem !important;
+            font-size: 1rem !important;
+            transition: all 0.2s ease !important;
+            min-height: 44px;
+            box-shadow: none !important;
+        }}
+        .stTextInput > div > div > input:focus, .stTextArea > div > div > textarea:focus {{
+            border-color: #FF6B8A !important;
+            box-shadow: 0 0 0 4px rgba(255,107,138,0.15) !important;
+            outline: none !important;
+        }}
+        .stSlider > div > div > div {{
+            background: rgba(255,107,138,0.2) !important;
+            height: 4px !important;
+            border-radius: 4px !important;
+        }}
+        .stSlider > div > div > div > div {{
+            background: #FF6B8A !important;
+            border-radius: 4px !important;
+        }}
+        .stSlider > div > div > div > div > div {{
+            background: #FF6B8A !important;
+            border-radius: 50% !important;
+            width: 22px !important;
+            height: 22px !important;
+            box-shadow: 0 2px 8px rgba(255,107,138,0.3) !important;
         }}
         .card, .stExpander {{
             background: {card_bg};
             border: 1px solid {border_color};
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+            padding: 1.2rem !important;
+            margin-bottom: 1.2rem !important;
+            transition: all 0.2s;
         }}
         .stat-card {{
             background: {card_bg};
             border: 1px solid {border_color};
-            border-radius: 16px;
-            padding: 1.2rem;
+            border-radius: 18px;
+            padding: 1.2rem 0.5rem;
             text-align: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+            transition: transform 0.2s;
+        }}
+        .stat-card:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.04);
         }}
         .stat-number {{
+            font-size: 2.4rem;
+            font-weight: 700;
             color: #FF6B8A;
+            line-height: 1.2;
+        }}
+        .stat-label {{
+            font-size: 0.85rem;
+            color: #8e8e93;
+            margin-top: 0.2rem;
         }}
         .big-number {{
+            font-size: 4rem;
+            font-weight: 700;
             color: #FF6B8A;
+            text-align: center;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
         }}
-        .stTextInput > div > div > input, .stTextArea > div > div > textarea,
-        .stSelectbox > div > div, .stDateInput > div > div {{
-            background: {card_bg} !important;
-            color: {text_color} !important;
-            border: 1.5px solid {border_color} !important;
+        .sub-header {{
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.8rem 0;
+            color: {text_color};
         }}
-        /* 字号缩放 */
-        html, body, .stApp {{
-            font-size: {16 * font_scale}px;
-        }}
-        h1 {{ font-size: {28 * font_scale}px; }}
-        h2 {{ font-size: {22 * font_scale}px; }}
-        h3 {{ font-size: {18 * font_scale}px; }}
-        .big-number {{ font-size: {48 * font_scale}px; }}
-        .stat-number {{ font-size: {24 * font_scale}px; }}
-        .stButton > button, .stDownloadButton > button, .stFileUploader button {{
-            font-size: {16 * font_scale}px;
-            padding: 0.6rem 1.8rem;
+        @media (max-width: 768px) {{
+            .css-1d391kg {{ width: 280px !important; }}
+            .stRadio > div > label {{ font-size: 0.95rem !important; padding: 0.7rem 1rem !important; min-height: 48px; }}
+            .stButton > button, .stDownloadButton > button, .stFileUploader button {{
+                width: 100% !important;
+                padding: 0.6rem 1rem !important;
+                min-height: 48px;
+                font-size: 1rem !important;
+                border-radius: 14px !important;
+            }}
+            .main .block-container {{ padding-left: 1rem !important; padding-right: 1rem !important; }}
+            .card {{ padding: 1rem !important; }}
+            .big-number {{ font-size: 3rem !important; }}
+            .stat-number {{ font-size: 2rem !important; }}
         }}
         {bg_css}
     """
@@ -309,7 +427,7 @@ def apply_css():
 
 # ================= 页面配置 =================
 st.set_page_config(page_title="恋爱日记", layout="wide", initial_sidebar_state="expanded")
-apply_css()
+apply_theme()
 
 # ================= 设置页面 =================
 def settings_page():
@@ -345,37 +463,34 @@ def settings_page():
             settings["bg_image"] = None
             st.rerun()
 
-    st.subheader("字号")
-    font_scale = st.slider("文字大小", 0.8, 1.4, settings["font_scale"], 0.05)
-    if font_scale != settings["font_scale"]:
-        settings["font_scale"] = font_scale
-        st.rerun()
-
     st.subheader("数据管理")
-    if st.button("导出数据 (JSON)"):
-        data = load_data()
-        st.download_button(
-            "下载 data.json",
-            json.dumps(data, ensure_ascii=False, indent=2),
-            file_name="love_diary_backup.json",
-            mime="application/json"
-        )
-    uploaded_file = st.file_uploader("导入数据 (JSON)", type=["json"])
-    if uploaded_file:
-        try:
-            imported = json.load(uploaded_file)
-            save_data(imported)
-            st.success("数据导入成功，请刷新页面")
-            st.rerun()
-        except Exception as e:
-            st.error(f"导入失败: {e}")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("导出数据 (JSON)", use_container_width=True):
+            data = load_data()
+            st.download_button(
+                "下载 data.json",
+                json.dumps(data, ensure_ascii=False, indent=2),
+                file_name="love_diary_backup.json",
+                mime="application/json"
+            )
+    with col2:
+        uploaded_file = st.file_uploader("导入数据 (JSON)", type=["json"])
+        if uploaded_file:
+            try:
+                imported = json.load(uploaded_file)
+                save_data(imported)
+                st.success("数据导入成功，请刷新页面")
+                st.rerun()
+            except Exception as e:
+                st.error(f"导入失败: {e}")
 
-# ================= 其他页面 =================
+# ================= 页面模块 =================
 def home_page():
     st.header("恋爱日记")
     start_date = date(2022, 7, 4)
     days = (date.today() - start_date).days
-    st.markdown(f"<div class='big-number'>{days}</div><div style='text-align:center;color:#8e8e93;'>在一起的天数</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='big-number'>{days}</div><div style='text-align:center;color:#8e8e93;margin-bottom:1rem;'>在一起的天数</div>", unsafe_allow_html=True)
 
     entries = get_entries()
     total = len(entries)
@@ -398,7 +513,7 @@ def home_page():
         st.markdown(f"<div class='stat-card'><div class='stat-number'>{top_mood}</div><div class='stat-label'>心情</div></div>", unsafe_allow_html=True)
 
     if entries:
-        st.subheader("最近日记")
+        st.markdown("<div class='sub-header'>最近日记</div>", unsafe_allow_html=True)
         for e in entries[-5:][::-1]:
             with st.expander(f"{e.get('date', '')} {e.get('title', '无标题')}"):
                 st.write(e.get('content', '')[:300] + ("..." if len(e.get('content',''))>300 else ""))
